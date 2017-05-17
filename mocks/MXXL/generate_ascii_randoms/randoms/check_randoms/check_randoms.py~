@@ -1,0 +1,249 @@
+import numpy as np
+import h5py
+import os.path,sys
+import matplotlib.pyplot as plt
+
+#-------------------Modify the followint lines if needed
+hdf5 = False
+
+mag_lim = 19.5 #20.0 
+N_rand = 3
+version = 'v0.0.4'
+
+# Mock name
+nom = 'BGS_r20.6.hdf5'
+
+# Path to mocks and N(z)
+pathin = '/mnt/lustre/desi/MXXL/nersc_download/'
+
+# Path to randoms and ascii mock
+rootrandom = '/mnt/lustre/desi/MXXL/catalogues/'
+outdir = rootrandom+'randoms/'+version+'/'
+
+# For a plot with cuts in z: low and high limits
+zl = 0. ; zh = 0.8
+# Bins for N(z) histogram
+nbins = 81
+#-------------------Modify until here----------------------
+
+file_random = "randoms_r%.1f_N%i_" %(mag_lim, N_rand)
+file_nz = pathin+'randoms/'+version+'/dNdz_r'+str(mag_lim)+'.dat'
+if not(os.path.isfile(file_nz)):
+    print 'STOP, N(z) not found:', file_nz ; sys.exit()
+xnz, ynz = np.loadtxt(file_nz).transpose()
+
+ra = [] ; dec = [] ; z = []
+if hdf5:
+    file_mock = pathin+'desi_footprint/'+version+'/'+nom
+    if not(os.path.isfile(file_mock)):
+        print 'STOP, mock not found:', file_mock ; sys.exit()
+    f = h5py.File(file_mock,'r')
+    ra1_mock   = f["Data/ra"].value
+    dec1_mock  = f["Data/dec"].value
+    z1_mock    = f["Data/z_obs"].value
+    app_mag = f["Data/app_mag"].value
+    f.close()
+
+    ind = np.where(app_mag<mag_lim)
+    ra_mock = ra1_mock[ind]
+    dec_mock = dec1_mock[ind]
+    z_mock = z1_mock[ind]
+
+    for i in range(N_rand):
+        random = outdir+file_random+str(i+1)+".hdf5"
+        if not(os.path.isfile(random)):
+            print 'STOP, not found:', random ; sys.exit()
+
+        f = h5py.File(random,'r')
+        ra  = np.append(ra,f["ra"].value)
+        dec = np.append(dec,f["dec"].value)
+        z   = np.append(z,f["z"].value)
+        f.close()
+
+else:
+    file_mock = rootrandom+'/mocks/'+version+\
+        '/BGS_r'+str(mag_lim)+'.txt'
+    if not(os.path.isfile(file_mock)):
+        print 'STOP, mock not found:', file_mock ; sys.exit()
+    ra_mock,dec_mock,z_mock = np.loadtxt(file_mock, \
+                                             usecols=(0,1,2), unpack=True)
+
+    for i in range(N_rand):
+        random = outdir+file_random+str(i+1)+".txt"
+        if not(os.path.isfile(random)):
+            print 'STOP, not found:', random ; sys.exit()
+
+ngal = len(ra_mock)
+
+# Check values of mocks and randoms
+rlow = min(ra_mock) ; rhigh = max(ra_mock)
+ind = np.where((ra<rlow) & (ra>rhigh))
+print 'RAs outside mock=',np.shape(ind)[1]
+
+dlow = min(dec_mock) ; dhigh = max(dec_mock)
+ind = np.where((dec<dlow) & (dec>dhigh))
+print 'DECs outside mock=',np.shape(ind)[1]
+
+zlow = min(z_mock) ; zhigh = max(z_mock)
+ind = np.where((z<zlow) & (z>zhigh))
+print 'zs outside mock=',np.shape(ind)[1]
+
+# Figure ####################################
+fig = plt.figure(figsize=(20,20))
+
+# Plot RA and DEC
+ax =plt.subplot(321) 
+ax.set_xlabel('RA') ; ax.set_ylabel('DEC')
+
+# Downsample to plot
+val = 10000
+if (ngal > val):
+    idx = np.arange(ngal)
+    np.random.shuffle(idx)
+    ax.plot(ra_mock[idx[:val]],dec_mock[idx[:val]],'k.',label='Mock')
+
+ntake = min(val,ngal/N_rand)
+idx = np.arange(len(ra))
+np.random.shuffle(idx)
+ax.plot(ra[idx[:ntake]],dec[idx[:ntake]],\
+            'r.',alpha=0.5,label='Random')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+# N(z)
+ax =plt.subplot(323) 
+ax.set_xlabel('z') ; ax.set_ylabel('Number, area=1')
+
+#ax.hist(z_mock, nbins, facecolor='k',label='Mock')
+#ax.hist(z, nbins, facecolor='r',label='Random',alpha=0.5)
+#ax.plot(xnz,ynz,'bo',label='File')
+
+# N(z) with normalized area 
+diff = [] 
+for i in range(len(xnz)-1):
+    val = xnz[i+1]-xnz[i] ; diff = np.append(diff,val)
+dif0 = np.mean(diff)
+if (len(set(diff)) == 1):
+    dif0 = diff[0]
+norm = sum(ynz)*dif0
+ax.hist(z_mock, nbins, facecolor='k',normed=True,label='Mock')
+ax.hist(z, nbins, facecolor='r',alpha=0.5,normed=True,label='Random')
+ax.plot(xnz,ynz/norm,'bo',label='File')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+# N(z) with normalized maximum
+ax =plt.subplot(325) 
+ax.set_xlabel('z') ; ax.set_ylabel('N(z)/max(N)')
+
+hist, bin_edges = np.histogram(z_mock,bins=nbins)
+bin_center = (bin_edges[:-1] + bin_edges[1:]) / 2
+val = float(np.max(hist)) ; y = hist/val #; print val
+ax.plot(bin_center,y,'k',label='Mock')
+
+hist, bin_edges = np.histogram(z,bins=nbins)
+bin_center = (bin_edges[:-1] + bin_edges[1:]) / 2
+val = float(np.max(hist)) ; y = hist/val #; print val
+ax.plot(bin_center,y,'r',alpha=0.5,label='Random')
+
+val = np.max(ynz) ; y = ynz/val #; print val
+ax.plot(xnz,y,'bo',label='File')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+# With a cut in z ################################
+ind = np.where((z>zl) & (z<zh)) 
+inz = z[ind]
+inra = ra[ind]
+indec = dec[ind]
+
+ind_mock = np.where((z_mock>zl) & (z_mock<zh)) 
+inz_mock = z_mock[ind_mock]  
+inra_mock = ra_mock[ind_mock] 
+indec_mock = dec_mock[ind_mock]
+
+print'*** With a cut in redshift'
+
+rlow = min(inra_mock) ; rhigh = max(inra_mock)
+ind = np.where((inra<rlow) & (inra>rhigh))
+print 'RAs outside mock=',np.shape(ind)[1]
+
+dlow = min(indec_mock) ; dhigh = max(indec_mock)
+ind = np.where((indec<dlow) & (indec>dhigh))
+print 'DECs outside mock=',np.shape(ind)[1]
+
+zlow = min(inz_mock) ; zhigh = max(inz_mock)
+ind = np.where((inz<zlow) & (inz>zhigh))
+print 'zs outside mock=',np.shape(ind)[1]
+
+# Plot RA and DEC
+ax =plt.subplot(322) 
+ax.set_xlabel('RA') ; ax.set_ylabel('DEC')
+
+# Downsample to plot
+val = 10000 ; ngal = len(inz_mock)
+if (ngal > val):
+    idx = np.arange(ngal)
+    np.random.shuffle(idx)
+    ax.plot(inra_mock[idx[:val]],indec_mock[idx[:val]],'k.',label='Mock w cut')
+
+ntake = min(val,ngal/N_rand)
+idx = np.arange(len(inra))
+np.random.shuffle(idx)
+ax.plot(inra[idx[:ntake]],indec[idx[:ntake]],\
+            'r.',alpha=0.5,label='Random w cut')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+# N(z)
+ax =plt.subplot(324) 
+ax.set_xlabel('z') ; ax.set_ylabel('Number, area=1')
+
+#ax.hist(inz_mock, nbins, facecolor='k',label='Mock w cut')
+#ax.hist(inz, nbins, facecolor='r',label='Random w cut',alpha=0.5)
+
+# Normalized N(z)
+diff = [] 
+for i in range(len(xnz)-1):
+    val = xnz[i+1]-xnz[i] ; diff = np.append(diff,val)
+dif0 = np.mean(diff)
+if (len(set(diff)) == 1):
+    dif0 = diff[0]
+norm = sum(ynz)*dif0
+ax.hist(inz_mock, nbins, facecolor='k',normed=True,label='Mock w cut')
+ax.hist(inz, nbins, facecolor='r',alpha=0.5,normed=True,label='Random w cut')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+# N(z) with normalized maximum
+ax =plt.subplot(326) 
+ax.set_xlabel('z') ; ax.set_ylabel('N(z)/max(N)')
+
+hist, bin_edges = np.histogram(inz_mock,bins=nbins)
+bin_center = (bin_edges[:-1] + bin_edges[1:]) / 2
+val = float(np.max(hist)) ; y = hist/val 
+ax.plot(bin_center,y,'k',label='Mock')
+
+hist, bin_edges = np.histogram(inz,bins=nbins)
+bin_center = (bin_edges[:-1] + bin_edges[1:]) / 2
+val = float(np.max(hist)) ; y = hist/val 
+ax.plot(bin_center,y,'r',alpha=0.5,label='Random')
+
+leg = plt.legend(loc=1)
+leg.draw_frame(False)
+
+#########################
+#plt.show()
+# Save figure
+if hdf5:
+    plotfile = outdir+'check_'+file_random+'hdf5.png'
+else:
+    plotfile = outdir+'check_'+file_random+'txt.png'
+fig.savefig(plotfile)
+print 'Plot:', plotfile
+

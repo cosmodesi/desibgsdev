@@ -1,0 +1,36 @@
+#! /usr/bin/env python
+import numpy as np
+import h5py
+import os.path, sys
+
+path1 = '/mnt/lustre/desi/MXXL/'
+path2 = 'desi_footprint/v0.0.3/' #'small/'
+path3 = '/mnt/lustre/pcarter1/DESI_BGS_mock/r20.0/data/' #'small/'
+nom   = 'BGS_r20.0' #'galaxy_catalogue_small'
+
+infile = path1+path2+nom+'.hdf5'
+if (os.path.isfile(infile)):
+    f = h5py.File(infile,'r')
+    ra1   = f["Data/ra"].value
+    dec1  = f["Data/dec"].value
+    zobs1 = f["Data/z_obs"].value
+    zcos1 = f["Data/z_cos"].value
+    app_mag = f["Data/app_mag"].value
+    f.close()
+
+    ind = np.where(app_mag<20.0)
+    ra = ra1[ind]
+    dec = dec1[ind]
+    zobs = zobs1[ind]
+    zcos = zcos1[ind]
+
+    #Write the information into an ascii file
+    output = path3+nom+'.txt'
+    tofile = zip(ra,dec,zobs,zcos)
+    with open(output, 'w') as outf:                            
+        outf.write('# ra,dec,zobs,zcos \n')                    
+        np.savetxt(outf,tofile,fmt=('%.8f'))    
+        outf.closed             
+    print 'Output: ',output
+else:
+    print 'NOT found:', infile
