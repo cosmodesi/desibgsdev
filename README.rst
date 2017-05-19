@@ -6,6 +6,7 @@ This repository contains development code and documentation for the DESI Bright
 Galaxy Survey (BGS) Working Group.
 
 To upload code you need to:
+
 1. Make a fork from the main repository
 2. Request a pull
 3. Review and merge
@@ -17,7 +18,9 @@ Before you make the 'pull request' make sure you are not including temporary fil
 
 ```
 *~
+
 [#]*[#]
+
 .\#*
 ```
 
