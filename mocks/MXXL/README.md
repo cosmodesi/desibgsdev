@@ -5,3 +5,6 @@ https://arxiv.org/abs/1701.06581
 
 ##### generate_ascii_randoms
   This directory contains programs to 1) read the MXXL hdf5 files and convert them into ASCII files, 2) generate randoms in two (slow) ways and 3) check the produced randoms.
+
+##### number_density
+  This directory contains code for converting between number densities and absolute magnitude thresholds in the MXXL mock
