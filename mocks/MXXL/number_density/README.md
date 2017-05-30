@@ -1,7 +1,7 @@
 
 Alex Smith (a.m.j.smith@durham.ac.uk) May 2017
 
-##### n_to_mag.py
+### n_to_mag.py
 
 n_to_mag.py contains a routine for converting a number density to an absolute magnitude threshold in the MXXL mock catalogue
 
@@ -13,7 +13,7 @@ This code also requires the files sdss_target_v0.0.3.dat and sdss_target_v0.0.4.
 
 Absolute magnitudes are rest-frame SDSS r-band magnitudes k-corrected to z=0.1 (with no evolutionary correction).
 
-##### To use in Python
+### To use in Python
 
 from n_to_mag import target_LF
 
