@@ -35,6 +35,14 @@ def get_predefined_sim_dict(simname):
         simulation_parameters = { 'nsim': 10, 'nspec': 1000  }
     elif simname == 'sim04':
         simulation_parameters = { 'nsim': 10, 'nspec': 1000  }
+    elif simname == 'sim05':
+        simulation_parameters = { 'zmax': 0.8, 'nspec': 800, 'rmagmin': 19.5, 'rmagmax': 20.0  }  
+    elif simname == 'sim06':
+        simulation_parameters = { 'zmax': 0.8, 'nspec': 800, 'rmagmin': 19.5, 'rmagmax': 20.0 }  
+    elif simname == 'sim07':
+        simulation_parameters = { 'nsim': 10, 'nspec': 200, 'zmax': 0.8, 'rmagmin': 19.5, 'rmagmax': 20.0  }
+    elif simname == 'sim08':
+        simulation_parameters = { 'nsim': 10, 'nspec': 200, 'zmax': 0.8, 'rmagmin': 19.5, 'rmagmax': 20.0  }
     else:
         simulation_parameters = {  }  # at this point, all sims use the same sim settings
         
@@ -56,17 +64,17 @@ def get_predefined_obs_dict(simname):
                     'MOONALT': -60,
                     'MOONSEP': 180
         }
-    if simname == 'sim01':
+    if simname == 'sim01' or simname == 'sim05':
         specified_conditions = { 'EXPTIME': 300, 'MOONFRAC': 0.0 }  # sim01 is the fiducial values
-    if simname == 'sim02':
+    if simname == 'sim02' or simname == 'sim06':
         specified_conditions = { 'EXPTIME': 480, 'MOONFRAC': 0.8, 
                                  'MOONALT': 30,  'MOONSEP': 120    }  
-    elif simname == 'sim03':
+    elif simname == 'sim03' or simname == 'sim07':
         specified_conditions = { 'exptimemin': 300, 'exptimemax': 720,
                                  'MOONALT': 30, 
                                  'MOONFRAC': 0.8, 
                                  'MOONSEP': 120                          }
-    elif simname == 'sim04': 
+    elif simname == 'sim04' or simname == 'sim08': 
         specified_conditions = { 'EXPTIME': 600,
                                  'moonfracmin': 0.6, 'moonfracmax': 0.98,
                                  'MOONALT': 30, 
@@ -90,9 +98,9 @@ def bgs_sim_spectra(sim, ref_obsconditions, simdir, overwrite=False, verbose=Fal
 
     # Generate the observing conditions table.
     simdata = bgs_write_simdata(sim, ref_obsconditions, simdir, rand, overwrite=overwrite)
-
+    randseeds = rand.randint(0,2**14,len(simdata)).astype(int)
     for exp, expdata in enumerate(simdata):
-
+        randseed = randseeds[exp]
         # Generate the observing conditions dictionary.  
         obs = simdata2obsconditions(expdata)
 
@@ -102,11 +110,10 @@ def bgs_sim_spectra(sim, ref_obsconditions, simdir, overwrite=False, verbose=Fal
         redshifts = np.asarray(meta['REDSHIFT'])
         truefile = os.path.join(simdir, sim['suffix'], 'bgs-{}-{:03}-true.fits'.format(sim['suffix'], exp))
         if overwrite or not os.path.isfile(truefile):    
-            write_templates(truefile, flux, wave, meta)
+            write_templates(truefile, flux, wave, meta,overwrite=True)
 
         spectrafile = os.path.join(simdir, sim['suffix'], 'bgs-{}-{:03}.fits'.format(sim['suffix'], exp))
         if overwrite or not os.path.isfile(spectrafile):
-            randseed = int(rand.randint(0,2**14,1))
             sourcetypes = np.array(["bgs" for i in range(sim['nspec'])])
             sim_spectra(wave, flux, 'bgs', spectrafile, redshift=redshifts, obsconditions=obs, 
                         sourcetype= sourcetypes, seed= randseed, expid= exp)
@@ -278,7 +285,7 @@ def bgs_write_simdata(sim, obs_conds, simdir, obsrand, overwrite=False):
 
     if overwrite or not os.path.isfile(simdatafile):     
         print('Writing {}'.format(simdatafile))
-        write_bintable(simdatafile, simdata, extname='SIMDATA', clobber=True)
+        write_bintable(simdatafile, simdata, extname='SIMDATA', clobber=overwrite)
 
     return simdata
 
@@ -304,7 +311,7 @@ def bgs_make_templates(sim, rand, BGSmaker):
             nmodel=sim['nspec'], redshift=redshift, mag=rmag, seed=sim['seed'])
     return flux, wave, meta
 
-def write_templates(outfile, flux, wave, meta):
+def write_templates(outfile, flux, wave, meta,overwrite=True):
     import astropy.units as u
     from astropy.io import fits
 
@@ -399,7 +406,7 @@ class BGStemplates(object):
 
         # Initialize the templates once:
         from desisim.templates import BGS
-        self.bgs_templates = BGS(wave=self.wave, normfilter='sdss2010-r') # Need to generalize this!
+        self.bgs_templates = BGS(wave=self.wave)#, normfilter='sdss2010-r') # Need to generalize this!
         self.bgs_templates.normline = None # no emission lines!
 
     def bgs(self, data, index=None, mockformat='durham_mxxl_hdf5'):

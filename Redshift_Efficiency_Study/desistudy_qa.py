@@ -17,6 +17,45 @@ log = get_logger()
 import seaborn as sns
 sns.set(style='white', font_scale=1.1, palette='deep')
 
+max_snr_r = 4
+max_snr_b = 4
+
+def get_all_sims_obs(sim_names):
+    from desistudy import get_predefined_sim_dict,get_predefined_obs_dict
+    all_sims, all_obsconds = [],[]
+    for simname in sim_names:
+        cur_sim = get_predefined_sim_dict(simname)
+        all_sims.append(cur_sim)
+        cur_obs = get_predefined_obs_dict(simname)
+        all_obsconds.append(cur_obs)
+
+    sims = np.atleast_1d(all_sims)
+    conditions = np.atleast_1d(all_obsconds)
+    return sims, conditions
+
+def print_sim_params(current_sim_name, sim_names, sims, conditions):
+    ## Find appropriate simulation and observing conditions
+    cur_sim = sims[ current_sim_name == sim_names ][0]
+    cur_obs = conditions[ current_sim_name == sim_names ][0]
+
+    ## Print the key/value pairs that define the simulation and observing conditions
+    print("Sim: {}".format(current_sim_name))
+    print("\tSim Parameters: ")
+    for key,val in cur_sim.items():
+        print("\t\t{}: {}".format(key,val))
+    print("\tObs Parameters: ")
+    for key,val in cur_obs.items():
+        print("\t\t{}: {}".format(key,val))
+        
+def print_file_locations(simdir,sims):
+    print("In {}/ :".format(simdir))
+    for sim in sims:
+        print("\tIn {}/:".format(sim['suffix']))
+        if os.path.exists(os.path.join(simdir,sim['suffix'])):
+            for filename in os.listdir(os.path.join(simdir,sim['suffix'])):
+                if filename.split('-')[-1] == 'results.fits':
+                    print("\t\t   {}".format(filename))
+
 def plot_subset(wave, flux, truth, nplot=16, ncol=4, these=None, \
                 xlim=None, loc='right', targname='', objtype=''):
     """Plot a random sampling of spectra."""
@@ -123,7 +162,8 @@ def qa_efficiency(res, pngfile=None):
         if dolog:
             thisax.set_xscale('log')
             thisax.xaxis.set_major_formatter(ScalarFormatter())
-
+        if 'SNR' in xx:
+            thisax.set_xlim([0,max_snr_r])
         thisax.axhline(y=1, ls='--', color='k')
         thisax.grid()
         thisax.set_ylim([0, 1.1])
@@ -184,12 +224,13 @@ def qa_exptime(res,pngfile=None):
     thisax = ax[1]
     mm, e1, e2, e3, e4, e5, ee1, ee2, ee3, ee4, ee5 = gethist('SNR_R', res, cut_on='EXPTIME')
     #300-405,405-510,510-615,615-720
-    thisax.errorbar(mm, e1, ee1, fmt='o', label='300-405s')
-    thisax.errorbar(mm, e2, ee2, fmt='o', label='405-510s')
-    thisax.errorbar(mm, e3, ee3, fmt='o', label='510-615s')
-    thisax.errorbar(mm, e4, ee4, fmt='o', label='615-720s')
+    thisax.errorbar(mm, e1, ee1, fmt='o', label='Exp=300-405s')
+    thisax.errorbar(mm, e2, ee2, fmt='o', label='Exp=405-510s')
+    thisax.errorbar(mm, e3, ee3, fmt='o', label='Exp=510-615s')
+    thisax.errorbar(mm, e4, ee4, fmt='o', label='Exp=615-720s')
 
     thisax.set_xlabel(r'S/N [$r$ channel]')
+    thisax.set_xlim([0,max_snr_r])
     if dolog:
         thisax.set_xscale('log')
         thisax.xaxis.set_major_formatter(ScalarFormatter())
@@ -199,7 +240,6 @@ def qa_exptime(res,pngfile=None):
     thisax.set_ylim([0, 1.1])     
 
     ax[0].set_ylabel('Redshift Efficiency')
-    ax[1].set_ylabel(r'S/N [$r$ channel]')
     ax[0].legend(loc='best', fontsize=12)
     ax[1].legend(loc='best', fontsize=12)
     plt.subplots_adjust(wspace=0.05, hspace=0.3)
@@ -240,7 +280,7 @@ def qa_moonfrac(res,pngfile=None):
     thisax.errorbar(mm, e3, ee3, fmt='o', label='ZWARN=0, $dz/(1+z)\geq 0.003$')
     thisax.errorbar(mm, e4, ee4, fmt='o', label='ZWARN>0')
 
-    thisax.set_xlabel('Exposure Time')
+    thisax.set_xlabel('Moon Fraction')
     if dolog:
         thisax.set_xscale('log')
         thisax.xaxis.set_major_formatter(ScalarFormatter())
@@ -253,22 +293,23 @@ def qa_moonfrac(res,pngfile=None):
     thisax = ax[1]
     mm, e1, e2, e3, e4, e5, ee1, ee2, ee3, ee4, ee5 = gethist('SNR_R', res, cut_on='MOONFRAC')
     #0.6-0.7,0.7-0.8,0.8-0.9,0.9-1.0
-    thisax.errorbar(mm, e1, ee1, fmt='o', label='0.6-0.7')
-    thisax.errorbar(mm, e2, ee2, fmt='o', label='0.7-0.8')
-    thisax.errorbar(mm, e3, ee3, fmt='o', label='0.8-0.9')
-    thisax.errorbar(mm, e4, ee4, fmt='o', label='0.9-1.0')
+    thisax.errorbar(mm, e1, ee1, fmt='o', label='MoonFrac=0.6-0.7')
+    thisax.errorbar(mm, e2, ee2, fmt='o', label='MoonFrac=0.7-0.8')
+    thisax.errorbar(mm, e3, ee3, fmt='o', label='MoonFrac=0.8-0.9')
+    thisax.errorbar(mm, e4, ee4, fmt='o', label='MoonFrac=0.9-1.0')
 
     thisax.set_xlabel(r'S/N [$r$ channel]')
+    thisax.set_xlim([0,max_snr_r])
     if dolog:
         thisax.set_xscale('log')
         thisax.xaxis.set_major_formatter(ScalarFormatter())
 
     thisax.axhline(y=1, ls='--', color='k')
     thisax.grid()
-    thisax.set_ylim([0, 1.1])     
+    thisax.set_ylim([0, 1.1]) 
+    
 
     ax[0].set_ylabel('Redshift Efficiency')
-    ax[1].set_ylabel(r'S/N [$r$ channel]')
     ax[0].legend(loc='best', fontsize=12)
     ax[1].legend(loc='best', fontsize=12)
     plt.subplots_adjust(wspace=0.05, hspace=0.3)
