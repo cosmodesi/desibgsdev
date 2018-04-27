@@ -29,19 +29,19 @@ def get_predefined_sim_dict(simname):
         }
     if simname == 'sim01':
         simulation_parameters = {  }  # sim01 contains all fiducial values
-    elif simname == 'sim02':
+    elif simname == 'sim02' or simname == 'sim12':
         simulation_parameters = {  }  # sim02 contains all fiducial values
-    elif simname == 'sim03':
+    elif simname == 'sim03' or simname == 'sim13':
         simulation_parameters = { 'nsim': 10, 'nspec': 1000  }
-    elif simname == 'sim04':
+    elif simname == 'sim04' or simname == 'sim14':
         simulation_parameters = { 'nsim': 10, 'nspec': 1000  }
     elif simname == 'sim05':
         simulation_parameters = { 'zmax': 0.8, 'nspec': 800, 'rmagmin': 19.5, 'rmagmax': 20.0  }  
-    elif simname == 'sim06':
+    elif simname == 'sim06' or simname == 'sim16':
         simulation_parameters = { 'zmax': 0.8, 'nspec': 800, 'rmagmin': 19.5, 'rmagmax': 20.0 }  
-    elif simname == 'sim07':
+    elif simname == 'sim07' or simname == 'sim17':
         simulation_parameters = { 'nsim': 10, 'nspec': 200, 'zmax': 0.8, 'rmagmin': 19.5, 'rmagmax': 20.0  }
-    elif simname == 'sim08':
+    elif simname == 'sim08' or simname == 'sim18':
         simulation_parameters = { 'nsim': 10, 'nspec': 200, 'zmax': 0.8, 'rmagmin': 19.5, 'rmagmax': 20.0  }
     else:
         simulation_parameters = {  }  # at this point, all sims use the same sim settings
@@ -64,23 +64,26 @@ def get_predefined_obs_dict(simname):
                     'MOONALT': -60,
                     'MOONSEP': 180
         }
-    if simname == 'sim01' or simname == 'sim05':
+    if simname in ['sim01','sim05']:
         specified_conditions = { 'EXPTIME': 300, 'MOONFRAC': 0.0 }  # sim01 is the fiducial values
-    if simname == 'sim02' or simname == 'sim06':
+    if simname in ['sim02','sim06','sim12','sim16']:
         specified_conditions = { 'EXPTIME': 480, 'MOONFRAC': 0.8, 
                                  'MOONALT': 30,  'MOONSEP': 120    }  
-    elif simname == 'sim03' or simname == 'sim07':
+    elif simname in ['sim03','sim07','sim13','sim17']:
         specified_conditions = { 'exptimemin': 300, 'exptimemax': 720,
                                  'MOONALT': 30, 
                                  'MOONFRAC': 0.8, 
                                  'MOONSEP': 120                          }
-    elif simname == 'sim04' or simname == 'sim08': 
+    elif simname in ['sim04','sim08','sim14','sim18']: 
         specified_conditions = { 'EXPTIME': 600,
                                  'moonfracmin': 0.6, 'moonfracmax': 0.98,
                                  'MOONALT': 30, 
                                  'MOONSEP': 120                          }  
     else:
         specified_conditions = { 'EXPTIME': 300, 'MOONFRAC': 0.0 } # defaults to sim01 (fiducial)
+    
+    if simname[:-1] == 'sim1':
+        specified_conditions['MOONSEP'] = 60
         
     fiducial_conditions.update(specified_conditions)
     return fiducial_conditions
